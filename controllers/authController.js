@@ -78,7 +78,15 @@ const authController = {
                 },
             });
             if (error) throw error;
-            res.status(200).json({ message: 'User signed in successfully' });
+            res.status(200).json({
+                 message: 'User signed in successfully',
+                 id: data.user.id,
+                 name: data.user.user_metadata.name,
+                 phone: data.user.user_metadata.phone,
+                 email: data.user.email,
+                 access_token: data.session.access_token,
+                 refresh_token: data.session.refresh_token,
+                });
         }catch (error){
             res.status(400).json({error: error.message});
         }
