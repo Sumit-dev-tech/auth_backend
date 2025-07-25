@@ -65,11 +65,17 @@ const authController = {
     },
 
     async SignIn (req, res) {
-        const {email, password} = req.body;
+        const {email, password, name, phone} = req.body;
         try{
             const {data, error} = await supabase.auth.signInWithPassword({
                 email,
                 password,
+                options:{
+                    data:{
+                        name,
+                        phone,
+                    },
+                },
             });
             if (error) throw error;
             res.status(200).json({ message: 'User signed in successfully' });
