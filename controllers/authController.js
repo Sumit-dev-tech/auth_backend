@@ -1,4 +1,6 @@
 const supabase = require('../config/supabase');
+const jwt = require('jsonwebtoken');
+require('dotenv').config();
 
 const authController = {
     async signUp(req, res) {
@@ -78,14 +80,20 @@ const authController = {
                 },
             });
             if (error) throw error;
+
+            const jwtSecret = process.env.NEXT_PUBLIC_JWT_KEY;
+
+            const payload = {
+                id: data.user.id,
+                name: data.user.user_metadata.name,
+                email: data.user.email,
+            }
+
+            const token = jwt.sign(payload, jwtSecret, {expiresIn: '1h'});
+
             res.status(200).json({
                  message: 'User signed in successfully',
-                 id: data.user.id,
-                 name: data.user.user_metadata.name,
-                 phone: data.user.user_metadata.phone,
-                 email: data.user.email,
-                 access_token: data.session.access_token,
-                 refresh_token: data.session.refresh_token,
+                 token: token,
                 });
         }catch (error){
             res.status(400).json({error: error.message});
@@ -96,6 +104,26 @@ const authController = {
             const {error} = await supabase.auth.signOut();
             if (error) throw error;
             res.status(200).json({ message: 'User signed out successfully' });
+        }catch (error){
+            res.status(400).json({error: error.message});
+        }
+    },
+
+    
+    async getUserDetails (req, res) {
+        const {id} = req.params;
+        try{
+            const {data, error} = await supabase.auth.admin.getUserById(id);
+
+            if (error) throw error;
+            if (!data) return res.status(404).json({error: "User not found"});
+
+            console.log("data", data);
+
+            res.status(200).json({
+                message: "User details fetched successfully",
+                data,
+            });
         }catch (error){
             res.status(400).json({error: error.message});
         }
