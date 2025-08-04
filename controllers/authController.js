@@ -41,7 +41,7 @@ const authController = {
             if (error) throw error ;
             res.status(200).json({
                 message: 'OTP verified',
-                access_token: data.session,
+                access_token: data.session.access_token,
             });
         }catch (error){
             res.status(400).json({error: error.message});
@@ -51,13 +51,14 @@ const authController = {
     async setPassword (req, res) {
         const {access_token, password} = req.body;
         try{
-            const {data, error} = await supabase.auth.updateUser(
-                {
-                    password: password,
-                },
-                {
-                    access_token: access_token,
-                }
+            const jwtSecret = process.env.NEXT_PUBLIC_JWT_KEY;
+            const decoded = jwt.verify(access_token, jwtSecret);
+
+            const {data, error} = await supabase.auth.admin.updateUserById(
+                decoded.sessionId, // You'll need to get user ID from session
+            {
+                password: password,
+            }
             );
             if (error) throw error;
             res.status(200).json({ message: 'Password updated successfully' });
