@@ -55,7 +55,7 @@ const authController = {
             const decoded = jwt.verify(access_token, jwtSecret);
 
             const {data, error} = await supabase.auth.admin.updateUserById(
-                decoded.sessionId, // You'll need to get user ID from session
+                decoded.sub, // Use the 'sub' field which contains the user UUID
             {
                 password: password,
             }
