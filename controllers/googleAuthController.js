@@ -5,10 +5,16 @@ const { parseCookieHeader, serializeCookieHeader } = require('@supabase/ssr');
 // Initiate Google OAuth
 const initiateGoogleAuth = async (req, res) => {
   try {
+    const { frontendUrl } = req.body;
+    
+    if (!frontendUrl) {
+      return res.status(400).json({ error: 'Frontend URL is required' });
+    }
+
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${process.env.BACKEND_URL}/api/auth/callback`,
+        redirectTo: `${process.env.BACKEND_URL}/api/auth/callback?frontendUrl=${encodeURIComponent(frontendUrl)}`,
       },
     });
 
@@ -32,10 +38,18 @@ const initiateGoogleAuth = async (req, res) => {
 const handleOAuthCallback = async (req, res) => {
   try {
     const code = req.query.code;
+    const frontendUrl = req.query.frontendUrl;
     const next = req.query.next ?? '/';
 
     if (!code) {
-      return res.redirect(303, '/auth/login?error=no_code');
+      const redirectUrl = frontendUrl 
+        ? `${frontendUrl}/auth/login?error=no_code`
+        : '/auth/login?error=no_code';
+      return res.redirect(303, redirectUrl);
+    }
+
+    if (!frontendUrl) {
+      return res.redirect(303, '/auth/login?error=no_frontend_url');
     }
 
     // Create server client for handling cookies
@@ -61,14 +75,34 @@ const handleOAuthCallback = async (req, res) => {
 
     if (error) {
       console.error('OAuth callback error:', error);
-      return res.redirect(303, '/auth/login?error=oauth_failed');
+      return res.redirect(303, `${frontendUrl}/auth/login?error=oauth_failed`);
     }
 
-    // Redirect to frontend with success
-    return res.redirect(303, `${process.env.FRONTEND_URL}/home?auth=success`);
+    // Get user data
+    const { data: { user }, error: userError } = await supabaseServer.auth.getUser();
+
+    if (userError || !user) {
+      console.error('Failed to get user data:', userError);
+      return res.redirect(303, `${frontendUrl}/auth/login?error=user_fetch_failed`);
+    }
+
+    // Create a simple token for frontend session management
+    const sessionToken = Buffer.from(JSON.stringify({
+      id: user.id,
+      email: user.email,
+      name: user.user_metadata?.full_name || user.email,
+      provider: 'google'
+    })).toString('base64');
+
+    // Redirect to frontend with success and token
+    return res.redirect(303, `${frontendUrl}/home?auth=success&token=${sessionToken}`);
   } catch (error) {
     console.error('OAuth callback processing error:', error);
-    return res.redirect(303, '/auth/login?error=server_error');
+    const frontendUrl = req.query.frontendUrl;
+    const redirectUrl = frontendUrl 
+      ? `${frontendUrl}/auth/login?error=server_error`
+      : '/auth/login?error=server_error';
+    return res.redirect(303, redirectUrl);
   }
 };
 
