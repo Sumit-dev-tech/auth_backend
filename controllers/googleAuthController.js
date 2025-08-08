@@ -15,18 +15,21 @@ const initiateGoogleAuth = async (req, res) => {
     const finalRedirectUrl = redirectUrl || '/home';
 
     // Build callback URL to this backend, carrying along the frontendUrl and intended redirect
-    const backendUrl = process.env.BACKEND_URL;
+    const inferredProtocol = (req.headers['x-forwarded-proto'] || '').toString().split(',')[0] || 'http';
+    const inferredHost = (req.headers['x-forwarded-host'] || req.headers.host || '').toString();
+    const backendUrl = process.env.BACKEND_URL || (inferredHost ? `${inferredProtocol}://${inferredHost}` : '');
     if (!backendUrl) {
-      return res.status(500).json({ error: 'BACKEND_URL is not configured on the server' });
+      return res.status(500).json({ error: 'Unable to determine BACKEND_URL. Configure env BACKEND_URL or ensure host headers are present.' });
     }
 
-    const callbackUrl = `${backendUrl || 'http://localhost:3000'}/api/auth/callback?frontendUrl=${encodeURIComponent(frontendUrl)}&redirectUrl=${encodeURIComponent(finalRedirectUrl)}`;
+    const callbackUrl = `${backendUrl}/api/auth/callback?frontendUrl=${encodeURIComponent(frontendUrl)}&redirectUrl=${encodeURIComponent(finalRedirectUrl)}`;
 
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
         // Redirect back to this backend so we can exchange the code for a session
         redirectTo: callbackUrl,
+        flowType: 'pkce',
       },
     });
 
