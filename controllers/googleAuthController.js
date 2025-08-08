@@ -20,7 +20,7 @@ const initiateGoogleAuth = async (req, res) => {
       return res.status(500).json({ error: 'BACKEND_URL is not configured on the server' });
     }
 
-    const callbackUrl = `${backendUrl}/api/auth/callback?frontendUrl=${encodeURIComponent(frontendUrl)}&redirectUrl=${encodeURIComponent(finalRedirectUrl)}`;
+    const callbackUrl = `${backendUrl || 'http://localhost:3000'}/api/auth/callback?frontendUrl=${encodeURIComponent(frontendUrl)}&redirectUrl=${encodeURIComponent(finalRedirectUrl)}`;
 
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
