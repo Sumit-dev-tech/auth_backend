@@ -5,16 +5,19 @@ const { parseCookieHeader, serializeCookieHeader } = require('@supabase/ssr');
 // Initiate Google OAuth
 const initiateGoogleAuth = async (req, res) => {
   try {
-    const { frontendUrl } = req.body;
+    const { frontendUrl, redirectUrl } = req.body;
     
     if (!frontendUrl) {
       return res.status(400).json({ error: 'Frontend URL is required' });
     }
 
+    // Default redirect URL if not provided
+    const finalRedirectUrl = redirectUrl || '/home';
+
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${process.env.BACKEND_URL}/api/auth/callback?frontendUrl=${encodeURIComponent(frontendUrl)}`,
+        redirectTo: 'http://localhost:3000/home',
       },
     });
 
@@ -39,7 +42,7 @@ const handleOAuthCallback = async (req, res) => {
   try {
     const code = req.query.code;
     const frontendUrl = req.query.frontendUrl;
-    const next = req.query.next ?? '/';
+    const redirectUrl = req.query.redirectUrl || '/home';
 
     if (!code) {
       const redirectUrl = frontendUrl 
@@ -94,8 +97,8 @@ const handleOAuthCallback = async (req, res) => {
       provider: 'google'
     })).toString('base64');
 
-    // Redirect to frontend with success and token
-    return res.redirect(303, `${frontendUrl}/home?auth=success&token=${sessionToken}`);
+    // Redirect to frontend with success, token, and the original redirect URL
+    return res.redirect(303, `${frontendUrl}${redirectUrl}?auth=success&token=${sessionToken}`);
   } catch (error) {
     console.error('OAuth callback processing error:', error);
     const frontendUrl = req.query.frontendUrl;
