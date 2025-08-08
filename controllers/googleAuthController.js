@@ -14,10 +14,19 @@ const initiateGoogleAuth = async (req, res) => {
     // Default redirect URL if not provided
     const finalRedirectUrl = redirectUrl || '/home';
 
+    // Build callback URL to this backend, carrying along the frontendUrl and intended redirect
+    const backendUrl = process.env.BACKEND_URL;
+    if (!backendUrl) {
+      return res.status(500).json({ error: 'BACKEND_URL is not configured on the server' });
+    }
+
+    const callbackUrl = `${backendUrl}/api/auth/callback?frontendUrl=${encodeURIComponent(frontendUrl)}&redirectUrl=${encodeURIComponent(finalRedirectUrl)}`;
+
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: 'http://localhost:3000/home',
+        // Redirect back to this backend so we can exchange the code for a session
+        redirectTo: callbackUrl,
       },
     });
 
@@ -98,7 +107,7 @@ const handleOAuthCallback = async (req, res) => {
     })).toString('base64');
 
     // Redirect to frontend with success, token, and the original redirect URL
-    return res.redirect(303, `${frontendUrl}${redirectUrl}?auth=success&token=${sessionToken}`);
+    return res.redirect(303, `${frontendUrl}${redirectUrl}?auth=success&token=${encodeURIComponent(sessionToken)}`);
   } catch (error) {
     console.error('OAuth callback processing error:', error);
     const frontendUrl = req.query.frontendUrl;
