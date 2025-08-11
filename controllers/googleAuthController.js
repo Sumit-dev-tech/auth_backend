@@ -19,7 +19,8 @@ const googleAuthController = {
             }
             if (data) {
                 console.log('Google OAuth sign-in successful:', data);
-                return res.status(200).json({ message: 'Redirecting to Google OAuth', data });
+                return res.status(200).json({ message: 'Redirecting to Google OAuth', url: data.url });
+
             }
         }catch (error) {
             console.error('Error in googleAuth:', error);
