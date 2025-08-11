@@ -1,20 +1,16 @@
-const {createServerClient} =  require('@supabase/ssr');
+const { createClientForServer} = require('../config/server');
 require('dotenv').config();
-
-const supabaseServerClient = createServerClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
 
 const googleAuthController = {
     async googleAuth(req, res) {
+        const supabaseServerClient = await createClientForServer();
         try{
 
-            const {redirectUrl} =  req.body;
+            const {redirectTo} =  req.body;
             const { data, error } = await supabaseServerClient.auth.signInWithOAuth({
                 provider: 'google',
                 options: {
-                    redirectTo: redirectUrl,
+                    redirectTo,
                 },
             });
             if (error) {
