@@ -1,4 +1,4 @@
-const {createServerClient} =  require('@/supabase/ssr');
+const {createServerClient} =  require('@supabase/ssr');
 require('dotenv').config();
 
 const supabaseServerClient = createServerClient(
